@@ -1,0 +1,5 @@
+include ':app', ':libusbcamera', ':libutils', ':openCVLibrary'
+rootProject.name='EyeOfLight'
+include ':opencv'
+include ':opencv'
+include ':openCVLibrary349'

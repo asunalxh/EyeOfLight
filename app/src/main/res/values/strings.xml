@@ -1,0 +1,106 @@
+<resources>
+    <string name="app_name">光明之眼</string>
+
+    <string name="text_begin">请开始说话…</string>
+    <string name="text_begin_recognizer">开始音频流识别</string>
+    <string name="text_begin_ise">开始音频流评测</string>
+    <string name="text_upload_contacts">上传联系人</string>
+    <string name="text_upload_userwords">上传用户词表</string>
+    <string name="text_upload_success">上传成功</string>
+    <string name="text_userword_empty">词表下载失败或内容为空</string>
+    <string name="text_download_success">下载成功</string>
+    <string name="pref_key_iat_show">iat_show</string>
+    <string name="pref_title_iat_show">显示听写界面</string>
+    <string name="text_show_contacts">上传联系人/词表显示</string>
+    <string name="text_show_iat_result">听写结果显示</string>
+
+    <string name="app_id">5e5946f2</string>
+    <string name="APIkey">eb67f92cac66fe670c4264246592c7a9</string>
+
+    <!-- 合成 -->
+    <string-array name="voicer_cloud_entries">
+        <item>小燕</item>
+        <item>小宇</item>
+        <item>凯瑟琳</item>
+        <item>亨利</item>
+        <item>玛丽</item>
+        <item>小研</item>
+        <item>小琪</item>
+        <item>小峰</item>
+        <item>小梅</item>
+        <item>小莉</item>
+        <item>小蓉</item>
+        <item>小芸</item>
+        <item>小坤</item>
+        <item>小强 </item>
+        <item>小莹</item>
+        <item>小新</item>
+        <item>楠楠</item>
+        <item>老孙</item>
+    </string-array>
+    <string-array name="voicer_cloud_values">
+        <item>xiaoyan</item>
+        <item>xiaoyu</item>
+        <item>catherine</item>
+        <item>henry</item>
+        <item>vimary</item>
+        <item>vixy</item>
+        <item>xiaoqi</item>
+        <item>vixf</item>
+        <item>xiaomei</item>
+        <item>xiaolin</item>
+        <item>xiaorong</item>
+        <item>xiaoqian</item>
+        <item>xiaokun</item>
+        <item>xiaoqiang</item>
+        <item>vixying</item>
+        <item>xiaoxin</item>
+        <item>nannan</item>
+        <item>vils</item>
+    </string-array>
+    <string-array name="voicer_xtts_entries">
+        <item>小燕</item>
+        <item>小峰</item>
+    </string-array>
+    <string-array name="voicer_xtts_values">
+        <item>xiaoyan</item>
+        <item>xiaofeng</item>
+    </string-array>
+    <string-array name="voicer_local_entries">
+        <item>小燕</item>
+        <item>小峰</item>
+
+    </string-array>
+    <string-array name="voicer_local_values">
+        <item>xiaoyan</item>
+        <item>xiaofeng</item>
+    </string-array>
+    <string-array name="stream_entries">
+        <item>通话</item>
+        <item>系统</item>
+        <item>铃声</item>
+        <item>音乐</item>
+        <item>闹铃</item>
+        <item>通知</item>
+    </string-array>
+    <string-array name="stream_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+    </string-array>
+    <string name="tts_toast_format" formatted="false">缓冲进度为%d%%，播放进度为%d%%</string>
+    <!-- 语言 -->
+    <string-array name="language_entries">
+        <item>普通话</item>
+        <item>粤语</item>
+        <item>英语</item>
+    </string-array>
+    <string-array name="language_values">
+        <item>mandarin</item>
+        <item>cantonese</item>
+        <item>en_us</item>
+    </string-array>
+</resources>
