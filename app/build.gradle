@@ -54,4 +54,5 @@ dependencies {
     implementation 'org.tensorflow:tensorflow-lite:0.0.0-nightly'
     implementation project(':libusbcamera')
     implementation project(path: ':openCVLibrary')
+    implementation 'com.google.android.material:material:1.1.0'
 }

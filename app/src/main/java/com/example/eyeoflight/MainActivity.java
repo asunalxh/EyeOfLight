@@ -1,6 +1,7 @@
 package com.example.eyeoflight;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -23,14 +24,16 @@ import android.util.Size;
 import android.util.TypedValue;
 import android.view.Surface;
 import android.view.TextureView;
+import android.widget.LinearLayout;
 
-import com.example.eyeoflight.Fragments.CameraFragment;
 import com.example.eyeoflight.Views.OverlayView;
+import com.example.eyeoflight.Views.SiriWaveView;
 import com.example.eyeoflight.env.BorderedText;
 import com.example.eyeoflight.env.ImageUtils;
 import com.example.eyeoflight.tflite.Classifier;
 import com.example.eyeoflight.tflite.TFLiteObjectDetectionAPIModel;
 import com.example.eyeoflight.tracking.MultiBoxTracker;
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechUtility;
 import com.jiangdg.usbcamera.UVCCameraHelper;
@@ -40,9 +43,6 @@ import com.serenegiant.usb.widget.CameraViewInterface;
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
-import org.opencv.android.Utils;
-import org.opencv.core.Mat;
-import org.opencv.core.Rect;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -100,6 +100,11 @@ public class MainActivity extends AppCompatActivity {
 
     private RangingHelper rangingHelper;
 
+    private HandlerThread siriThread;
+    private Handler siriHandler;
+    private SiriWaveView siri;
+    private BottomSheetBehavior<LinearLayout> bottomSheetBehavior;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -118,9 +123,12 @@ public class MainActivity extends AppCompatActivity {
         uvcCameraHelper.initUSBMonitor(MainActivity.this, cameraView, onMyDevConnectListener);
         uvcCameraHelper.setOnPreviewFrameListener(onPreViewResultListener);
 
-//        CameraFragment cameraFragment = new CameraFragment();
-//        getSupportFragmentManager().beginTransaction().replace(R.id.container, cameraFragment).commit();
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
+        siri = findViewById(R.id.siri);
+        bottomSheetBehavior = BottomSheetBehavior.from(findViewById(R.id.bottom_sheet_layout));
+        bottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
 
     }
 
@@ -130,6 +138,9 @@ public class MainActivity extends AppCompatActivity {
         handlerThread = new HandlerThread("handlerThread");
         handlerThread.start();
         handler = new Handler(handlerThread.getLooper());
+        siriThread = new HandlerThread("siriThread");
+        siriThread.start();
+        siriHandler = new Handler(siriThread.getLooper());
         uvcCameraHelper.registerUSB();
     }
 
