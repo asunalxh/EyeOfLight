@@ -16,6 +16,8 @@ import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.text.DecimalFormat;
+import java.util.LinkedList;
+import java.util.Queue;
 
 public class RangingHelper {
 
@@ -31,12 +33,12 @@ public class RangingHelper {
 
     static {
 
-        M1.put(0, 0, 485.692525983955, -0.257649066990371, 318.777093535048, 0, 485.377199954270, 255.829500045440, 0, 0, 1);
-        D1.put(0, 0, 0.0686246599879822, -0.0201084944179203, 7.32007629519905e-05, 9.19724783774552e-05, 0);
-        M2.put(0, 0, 483.943941538688, -0.216185125596302, 327.645270123473, 0, 483.727519328844, 231.254535626299, 0, 0, 1);
-        D2.put(0, 0, 0.0416716214468043, 0.118442166661037, 0.000578525154314817, -0.00289414781415480, 0);
-        R.put(0, 0, 0.999963773670686, 6.551732301961800e-04, 0.008486583194662, -6.286941270569738e-04, 0.999994927650522, -0.003122405630659, -0.008488585864329, 0.003116957052351, 0.999959113408522);
-        T.put(0, 0, -60.587855906352770, 0.086753945901300, -0.865576259426846);
+        M1.put(0, 0, 483.403229464143,0.322305162469764,319.906546252916,0,483.199210854371,255.601277516644, 0,0,1);
+        D1.put(0, 0, 0.116178139136145,-0.148310225488464,-0.000596821006937809,0.000834701531831373,0);
+        M2.put(0, 0, 483.196357871702,0.328237800729554,329.281575268190,0,482.895658913392,232.569296329284, 0,0,1);
+        D2.put(0, 0, 0.109538850436669,-0.138854715390536,0.000474344111747174,-0.000826384066605694,0);
+        R.put(0, 0, 0.999959755905920,4.864674150632188e-04,0.008958231858315,-4.744024301004220e-04,0.999998977732052,-0.001348879974295,-0.008958878886756,0.001344575882879,0.999958964460436);
+        T.put(0, 0, -45.310675018572240,-0.141487157845971,-0.085642355461151);
     }
 
     private float scale = 1.0f;
@@ -72,7 +74,6 @@ public class RangingHelper {
 
     private Method method = Method.BM;
 
-    private DecimalFormat decimalFormat = new DecimalFormat("#.0");
 
 
     public RangingHelper() {
@@ -132,36 +133,38 @@ public class RangingHelper {
         return ImageUtils.matToBitmap(right);
     }
 
-    public synchronized double getDis(int row, int cal) {
+    public double getDis(int row, int cal) {
         if (row < 0 || row >= imgSize.height || cal < 0 || cal >= imgSize.width)
             return 16.f;
         double[] ans = getLoc(row, cal);
-        return Double.parseDouble(decimalFormat.format(ans[2] / 10000));
+        return ans[2] / 10000;
     }
 
-    public synchronized double getDis(float startRow, float endRow, float startCol, float endCol) {
+
+    public double getDis(float startRow, float endRow, float startCol, float endCol) {
+        double ans;
         int midRow = (int) ((startRow + endRow) / 2);
         int midCol = (int) ((startCol + endCol) / 2);
-        for (int col = midCol; col <=endCol; col-=2) {
-            for (int row = midRow; row >= startRow; row-=2) {
-                double ans = getDis(row, col);
+        for (int col = midCol; col <= endCol; col -= 5) {
+            for (int row = midRow; row >= startRow; row -= 5) {
+                ans = getDis(row, col);
                 if (ans < 16.f)
                     return ans;
             }
-            for (int row = midRow + 1; row <= endRow; row+=2) {
-                double ans = getDis(row, col);
+            for (int row = midRow + 1; row <= endRow; row += 5) {
+                ans = getDis(row, col);
                 if (ans < 16.f)
                     return ans;
             }
         }
-        for (int col = midCol+1; col <= endCol; col+=2) {
-            for (int row = midRow; row >= startRow; row-=2) {
-                double ans = getDis(row, col);
+        for (int col = midCol + 1; col <= endCol; col += 5) {
+            for (int row = midRow; row >= startRow; row -= 5) {
+                ans = getDis(row, col);
                 if (ans < 16.f)
                     return ans;
             }
-            for (int row = midRow + 1; row <= endRow; row+=2) {
-                double ans = getDis(row, col);
+            for (int row = midRow + 1; row <= endRow; row += 5) {
+                ans = getDis(row, col);
                 if (ans < 16.f)
                     return ans;
             }
@@ -262,11 +265,8 @@ public class RangingHelper {
             Mat temp = xyz.clone();
             Core.multiply(temp, new Scalar(1, 1, 1), xyz, 16);
         }
-    }
+    }1
 
-    private void multiply(Mat mat, double scale) {
-        Mat temp = mat.clone();
-        Core.multiply(temp, new Scalar(1), mat, scale);
     }
 
 

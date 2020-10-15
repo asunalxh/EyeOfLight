@@ -20,11 +20,13 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
+import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
 import android.view.Surface;
 import android.view.TextureView;
 import android.widget.LinearLayout;
+import android.widget.Toast;
 
 import com.example.eyeoflight.Views.OverlayView;
 import com.example.eyeoflight.Views.SiriWaveView;
@@ -48,13 +50,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
 
 public class MainActivity extends AppCompatActivity {
 
     protected Size outputSize = new Size(1280, 480);
     protected Size previewSize = new Size(640, 480);
-    private HandlerThread handlerThread;
-    private Handler handler;
+    private HandlerThread detectThread;
+    private Handler detectHandler;
     private Runnable postInferenceCallback;
     private Runnable imageConverter;
     private boolean isProcessingFrame = false;
@@ -100,10 +105,19 @@ public class MainActivity extends AppCompatActivity {
 
     private RangingHelper rangingHelper;
 
+    private HandlerThread stereoThread;
+    private Handler stereoHandler;
+
     private HandlerThread siriThread;
     private Handler siriHandler;
     private SiriWaveView siri;
     private BottomSheetBehavior<LinearLayout> bottomSheetBehavior;
+
+    private CyclicBarrier cyclicBarrier;
+
+    private CountDownLatch countDownLatch;
+
+    private List<Classifier.Recognition> results;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -135,9 +149,16 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        handlerThread = new HandlerThread("handlerThread");
-        handlerThread.start();
-        handler = new Handler(handlerThread.getLooper());
+        detectThread = new HandlerThread("detectThread",-19);
+        detectThread.start();
+        detectHandler = new Handler(detectThread.getLooper());
+
+
+        stereoThread = new HandlerThread("stereoThread",-19);
+        stereoThread.start();
+        stereoHandler = new Handler(stereoThread.getLooper());
+
+
         siriThread = new HandlerThread("siriThread");
         siriThread.start();
         siriHandler = new Handler(siriThread.getLooper());
@@ -162,7 +183,6 @@ public class MainActivity extends AppCompatActivity {
         public void onManagerConnected(int status) {
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS: {
-
                     rangingHelper = new RangingHelper();
                 }
                 break;
@@ -230,6 +250,7 @@ public class MainActivity extends AppCompatActivity {
     private AbstractUVCCameraHandler.OnPreViewResultListener onPreViewResultListener = new AbstractUVCCameraHandler.OnPreViewResultListener() {
         @Override
         public void onPreviewResult(byte[] data) {
+
             if (isProcessingFrame)
                 return;
 
@@ -344,25 +365,42 @@ public class MainActivity extends AppCompatActivity {
         baseBitmap = Bitmap.createBitmap(outputSize.getWidth(), outputSize.getHeight(), Bitmap.Config.ARGB_8888);
         baseBitmap.setPixels(getRgbBytes(), 0, outputSize.getWidth(), 0, 0, outputSize.getWidth(), outputSize.getHeight());
 
-//        rgbFrameBitmap.setPixels(getRgbBytes(), 0, previewWidth, 0, 0, previewWidth, previewHeight);
-
         rgbFrameBitmap = Bitmap.createBitmap(baseBitmap, 0, 0, previewSize.getWidth(), previewSize.getHeight());
 
+        rangingHelper.setImage(baseBitmap);
 
         readyForNextImage();
 
         final Canvas canvas = new Canvas(croppedBitmap);
         canvas.drawBitmap(rgbFrameBitmap, frameToCropTransform, null);
 
-        runInBackground(
+//        if (cyclicBarrier == null)
+//            cyclicBarrier = new CyclicBarrier(2);
+
+        countDownLatch = new CountDownLatch(1);
+
+        runInStereoThread(() -> {
+            long startTime = SystemClock.uptimeMillis();
+            rangingHelper.calculate(RangingHelper.Method.BM);
+            long time = SystemClock.uptimeMillis() - startTime;
+            Log.d("DebugTag", "Arrived At StereoThread " + time + "ms");
+            countDownLatch.countDown();
+        });
+
+        runInDetectThread(
                 new Runnable() {
                     @Override
                     public void run() {
-                        rangingHelper.setImage(baseBitmap);
-                        final long startTime = SystemClock.uptimeMillis();
-                        final List<Classifier.Recognition> results = detector.recognizeImage(croppedBitmap);
-                        rangingHelper.calculate(RangingHelper.Method.BM);
-                        lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
+
+                        long startTime = SystemClock.uptimeMillis();
+                        results = detector.recognizeImage(croppedBitmap);
+                        long time = SystemClock.uptimeMillis() - startTime;
+                        Log.d("DebugTag", "Arrived At DetectThread " + time + "ms");
+                        try {
+                            countDownLatch.await();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
 
                         cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
                         final Canvas canvas = new Canvas(cropCopyBitmap);
@@ -377,6 +415,8 @@ public class MainActivity extends AppCompatActivity {
                                 minimumConfidence = MINIMUM_CONFIDENCE_TF_OD_API;
                                 break;
                         }
+
+                        Log.d("DebugTag", "Arrived At CyclicBarrier");
 
                         final List<Classifier.Recognition> mappedRecognitions =
                                 new LinkedList<>();
@@ -403,10 +443,15 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
-    private synchronized void runInBackground(final Runnable r) {
-        if (handler != null) {
-            handler.post(r);
+    private synchronized void runInDetectThread(final Runnable r) {
+        if (detectHandler != null) {
+            detectHandler.post(r);
         }
+    }
+
+    private synchronized void runInStereoThread(final Runnable r) {
+        if (stereoHandler != null)
+            stereoHandler.post(r);
     }
 
     private int[] getRgbBytes() {

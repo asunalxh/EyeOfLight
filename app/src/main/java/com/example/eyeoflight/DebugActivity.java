@@ -67,7 +67,6 @@ public class DebugActivity extends AppCompatActivity {
                                     case MotionEvent.ACTION_DOWN:
                                         int x = (int) event.getX();
                                         int y = (int) event.getY();
-                                        Log.d("test:::",String.valueOf(x)+' '+y+' '+rangingHelper.getDis(y,x));
                                         break;
                                 }
                                 return true;

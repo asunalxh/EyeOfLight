@@ -148,12 +148,14 @@ public class MultiBoxTracker {
 
       final String labelString =
           !TextUtils.isEmpty(recognition.title)
-              ? String.format("%s %.2f", recognition.title, (100 * recognition.detectionConfidence))
-              : String.format("%.2f", (100 * recognition.detectionConfidence));
+              ? String.format("%s %.1f", recognition.title, (100 * recognition.detectionConfidence))
+              : String.format("%.1f", (100 * recognition.detectionConfidence));
       //            borderedText.drawText(canvas, trackedPos.left + cornerSize, trackedPos.top,
       // labelString);
+
+      final String disString = String.format("%.1f",recognition.distance);
       borderedText.drawText(
-          canvas, trackedPos.left + cornerSize, trackedPos.top, labelString + "% " + recognition.distance + "m", boxPaint);
+          canvas, trackedPos.left + cornerSize, trackedPos.top, labelString + "% " + disString + "m", boxPaint);
     }
   }
 
