@@ -33,6 +33,7 @@ import com.intel.realsense.librealsense.DeviceList;
 import com.intel.realsense.librealsense.DeviceListener;
 import com.intel.realsense.librealsense.Extension;
 import com.intel.realsense.librealsense.Frame;
+import com.intel.realsense.librealsense.FrameCallback;
 import com.intel.realsense.librealsense.FrameReleaser;
 import com.intel.realsense.librealsense.FrameSet;
 import com.intel.realsense.librealsense.GLRsSurfaceView;
@@ -52,7 +53,7 @@ public abstract class CameraActivity extends AppCompatActivity {
     protected static final int width = 640;
     protected static final int height = 480;
 
-    private byte[] bytes = new byte[width * height* 3];
+    private byte[] bytes = new byte[width * height * 3];
 
     private GLRsSurfaceView mGLSurfaceView;     //显示画面
 
@@ -66,8 +67,9 @@ public abstract class CameraActivity extends AppCompatActivity {
     private Handler handler;                    //物体识别用handler
 
 
-    private boolean isProcessingFrame = false;  //正在识别图像
+    protected boolean computingDetection = false;   //正在计算图像
     private int[] rgbBytes = null;
+    private float[] depth = new float[width * height * 2];
 
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -102,12 +104,12 @@ public abstract class CameraActivity extends AppCompatActivity {
 
         mPermissionsGranted = true;
 
-        onPreviewSizeChosen(new Size(width,height),0);
+        onPreviewSizeChosen(new Size(width, height), 0);
 
     }
 
 
-    private void debug(){
+    private void debug() {
     }
 
 
@@ -132,7 +134,9 @@ public abstract class CameraActivity extends AppCompatActivity {
 
         mRsContext.setDevicesChangedCallback(new DeviceListener() {
             @Override
-            public void onDeviceAttach() {start(); }
+            public void onDeviceAttach() {
+                start();
+            }
 
             @Override
             public void onDeviceDetach() {
@@ -175,7 +179,7 @@ public abstract class CameraActivity extends AppCompatActivity {
         stop();
     }
 
-
+    protected Frame fr;
 
     //摄像头帧处理线程
     private final Thread cameraThread = new Thread(new Runnable() {
@@ -183,29 +187,31 @@ public abstract class CameraActivity extends AppCompatActivity {
         public void run() {
             try {
                 // try statement needed here to release resources allocated by the Pipeline:start() method
-                final DecimalFormat df = new DecimalFormat("#.##");
                 while (!cameraThread.isInterrupted()) {
                     try (FrameSet frames = mPipeline.waitForFrames()) {
 
-                        if(isProcessingFrame)
-                            continue;
+                        mGLSurfaceView.upload(frames);
+
+//                        if (isProcessingFrame)
+//                            continue;
 
                         //提取彩色摄像机图像
                         try (Frame rgbFrame = frames.first(StreamType.COLOR)) {
-                            mGLSurfaceView.upload(rgbFrame);//更新显示
+//                            mGLSurfaceView.upload(rgbFrame);//更新显示
                             rgbFrame.getData(bytes);
                         }
 
-                        //提取深度图像
-                        try (Frame f = frames.first(StreamType.DEPTH)) {
-                            DepthFrame depth = f.as(Extension.DEPTH_FRAME); //深度信息帧
-//                            final float deptValue = depth.getDistance(depth.getWidth() / 2, depth.getHeight() / 2);
-//                            Log.d(TAG, "Distance: " + df.format(deptValue));
+                        if (computingDetection) {
+//                            Log.d(TAG,"continue");
+                            continue;
                         }
 
-                        isProcessingFrame = true;
-                        processImage();
+                        fr = frames.first(StreamType.DEPTH);
 
+
+                        //提取深度图像
+
+                        processImage();
                     }
                 }
             } catch (Exception e) {
@@ -274,9 +280,6 @@ public abstract class CameraActivity extends AppCompatActivity {
         return ImageUtils.convertByteToColor(bytes);
     }
 
-    protected void readyForNextImage() {
-        isProcessingFrame = false;
-    }
 
     protected abstract void processImage();
 

@@ -20,7 +20,7 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintDimensionRatio="4:3"/>
+            app:layout_constraintDimensionRatio="4:6"/>
 
         <com.example.eyeoflight_lite.customview.OverlayView
             android:id="@+id/tracking_overlay"

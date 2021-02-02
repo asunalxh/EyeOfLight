@@ -14,6 +14,7 @@ import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
 import android.view.Surface;
@@ -25,13 +26,18 @@ import com.example.eyeoflight_lite.env.ImageUtils;
 import com.example.eyeoflight_lite.tflite.Classifier;
 import com.example.eyeoflight_lite.tflite.TFLiteObjectDetectionAPIModel;
 import com.example.eyeoflight_lite.tracking.MultiBoxTracker;
+import com.intel.realsense.librealsense.DepthFrame;
+import com.intel.realsense.librealsense.Extension;
+import com.intel.realsense.librealsense.Frame;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.LinkedList;
 import java.util.List;
 
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class DetectorActivity extends CameraActivity {
+    private static final String TAG = "DetectorActivity_Log";
 //    private static final Logger LOGGER = new Logger();
 
     // Configuration values for the prepackaged SSD model.
@@ -60,7 +66,6 @@ public class DetectorActivity extends CameraActivity {
     private Bitmap croppedBitmap = null;
     private Bitmap cropCopyBitmap = null;
 
-    private boolean computingDetection = false;
 
     private long timestamp = 0;
 
@@ -134,6 +139,9 @@ public class DetectorActivity extends CameraActivity {
         tracker.setFrameConfiguration(previewWidth, previewHeight, sensorOrientation);
     }
 
+    private DepthFrame depthFrame;
+    private Frame frame;
+
     @Override
     protected void processImage() {
         ++timestamp;
@@ -142,7 +150,6 @@ public class DetectorActivity extends CameraActivity {
 
         // No mutex needed as this method is not reentrant.
         if (computingDetection) {
-            readyForNextImage();
             return;
         }
         computingDetection = true;
@@ -150,7 +157,6 @@ public class DetectorActivity extends CameraActivity {
 
         rgbFrameBitmap.setPixels(getRgbBytes(), 0, previewWidth, 0, 0, previewWidth, previewHeight);
 
-        readyForNextImage();
 
         final Canvas canvas = new Canvas(croppedBitmap);
         canvas.drawBitmap(rgbFrameBitmap, frameToCropTransform, null);
@@ -159,11 +165,16 @@ public class DetectorActivity extends CameraActivity {
             ImageUtils.saveBitmap(croppedBitmap);
         }
 
+        frame = fr.clone();
+        fr.close();
+
         runInBackground(
                 new Runnable() {
                     @Override
                     public void run() {
-                        final List<Classifier.Recognition> results = detector.recognizeImage(croppedBitmap);
+                        final List<Classifier.Recognition> results = detector.recognizeImage(croppedBitmap);    //物体识别结果
+
+                        Log.d(TAG, "DataSize: " + frame.getDataSize());
 
                         cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
                         final Canvas canvas = new Canvas(cropCopyBitmap);
@@ -182,21 +193,49 @@ public class DetectorActivity extends CameraActivity {
                         final List<Classifier.Recognition> mappedRecognitions =
                                 new LinkedList<Classifier.Recognition>();
 
+                        depthFrame = frame.as(Extension.DEPTH_FRAME);
+
                         for (final Classifier.Recognition result : results) {
                             final RectF location = result.getLocation();
+
                             if (location != null && result.getConfidence() >= minimumConfidence) {
                                 canvas.drawRect(location, paint);
 
                                 cropToFrameTransform.mapRect(location);
 
                                 result.setLocation(location);
+
+                                //添加距离信息
+                                float depth = 0.f;
+                                int x = 0, y = 0;
+                                for (int i = (int) location.left; i <= location.right; i += 5) {
+                                    if (i > 0 && i < width) {
+                                        for (int j = (int) location.top; j <= location.bottom; j += 5) {
+                                            if (j > 0 && j < height) {
+                                                float temp = depthFrame.getDistance(x,j);
+                                                if (depth == 0 || temp < depth) {
+                                                    depth = temp;
+                                                    x = i;
+                                                    y = j;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                result.setDepth(depth);
+//                                Log.d(TAG,"depth: " + depth + "   title: " + result.toString() + " x:" + x + " y: "+y);
+//                                Log.d(TAG,"Width: " + depthFrame.getWidth() + " Height: " + depthFrame.getHeight());
+//                                Log.d(TAG,"CenterDepth: " + depthFrame.getDistance(depthFrame.getWidth()/2,depthFrame.getHeight()/2));
+
                                 mappedRecognitions.add(result);
+                                //Log.d(TAG,"Location: left:" + location.left + " right:" + location.right + " top:"+ location.top + " bottom:" + location.bottom);
                             }
                         }
 
+                        frame.close();
+
                         tracker.trackResults(mappedRecognitions, currTimestamp);
                         trackingOverlay.postInvalidate();
-
                         computingDetection = false;
 
                     }
