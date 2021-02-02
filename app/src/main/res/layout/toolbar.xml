@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.appcompat.widget.Toolbar
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="?attr/actionBarSize"
+    android:background="@color/black"
+    android:id="@+id/toolbar">
+
+    <ImageView
+        android:layout_width="100px"
+        android:layout_height="100px"
+        android:layout_marginLeft="10px"
+        android:src="@drawable/eye" />
+
+    <TextView
+        android:id="@+id/toolbar_title"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_marginLeft="100px"
+        android:gravity="center_vertical"
+        android:text="光明之眼"
+        android:textColor="@color/white"
+        android:textSize="65px" />
+
+</androidx.appcompat.widget.Toolbar>
