@@ -20,6 +20,8 @@ import android.widget.TextView;
 import com.example.eyeoflight_lite.Fragment.CameraFragment;
 import com.example.eyeoflight_lite.Fragment.FragmentOperation;
 import com.example.eyeoflight_lite.Fragment.IndexFragment;
+import com.example.eyeoflight_lite.Fragment.MapFragment;
+import com.example.eyeoflight_lite.Fragment.NavigationFragment;
 import com.example.eyeoflight_lite.env.ImageUtils;
 import com.intel.realsense.librealsense.Config;
 import com.intel.realsense.librealsense.DeviceList;
@@ -30,9 +32,6 @@ import com.intel.realsense.librealsense.Pipeline;
 import com.intel.realsense.librealsense.PipelineProfile;
 import com.intel.realsense.librealsense.RsContext;
 import com.intel.realsense.librealsense.StreamType;
-
-import java.io.ByteArrayOutputStream;
-import java.text.DecimalFormat;
 
 public abstract class CameraActivity extends AppCompatActivity {
     private static final String TAG = "CameraActivity_Log";
@@ -63,6 +62,9 @@ public abstract class CameraActivity extends AppCompatActivity {
 
     protected CameraFragment cameraFragment;
     protected IndexFragment indexFragment;
+    protected MapFragment mapFragment;
+    protected NavigationFragment navigationFragment;
+
     private FragmentType fragmentType;      //正在显示那个fragment
 
 
@@ -92,6 +94,8 @@ public abstract class CameraActivity extends AppCompatActivity {
 
         cameraFragment = new CameraFragment();
         indexFragment = new IndexFragment();
+        mapFragment = new MapFragment();
+        navigationFragment = new NavigationFragment();
 
         onPreviewSizeChosen(new Size(width, height), 0);
 
@@ -275,6 +279,7 @@ public abstract class CameraActivity extends AppCompatActivity {
                 showRgbFrame = true;
             }
         });
+        fragmentType = FragmentType.CameraFragment;
     }
 
     public void switchToIndex() {
@@ -286,7 +291,19 @@ public abstract class CameraActivity extends AppCompatActivity {
                 showRgbFrame = false;
             }
         });
+        fragmentType = FragmentType.IndexFragment;
     }
+
+    public void switchToMap(){
+        getSupportFragmentManager().beginTransaction().replace(R.id.container, mapFragment).commit();
+        fragmentType = FragmentType.MapFragment;
+    }
+
+    public void switchToNavigation(){
+        getSupportFragmentManager().beginTransaction().replace(R.id.container, navigationFragment).commit();
+        fragmentType = FragmentType.NavigationFragment;
+    }
+
 
     protected abstract void processImage();
 
@@ -301,6 +318,6 @@ public abstract class CameraActivity extends AppCompatActivity {
     protected abstract void setUseNNAPI(boolean isChecked);
 
     public enum FragmentType {
-        CameraFragment, IndexFragment, NavigationFragment
+        CameraFragment, IndexFragment, MapFragment,NavigationFragment
     }
 }

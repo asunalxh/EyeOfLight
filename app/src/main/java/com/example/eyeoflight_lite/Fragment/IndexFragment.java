@@ -1,6 +1,5 @@
 package com.example.eyeoflight_lite.Fragment;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -37,6 +36,19 @@ public class IndexFragment extends Fragment {
             }
         });
 
+        navigationView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                activity.switchToMap();
+            }
+        });
+
+        readView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                activity.switchToNavigation();
+            }
+        });
         return view;
     }
 }
