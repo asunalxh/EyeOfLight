@@ -20,6 +20,7 @@ import android.util.TypedValue;
 import android.view.Surface;
 import android.widget.Toast;
 
+import com.example.eyeoflight_lite.Fragment.FragmentOperation;
 import com.example.eyeoflight_lite.customview.OverlayView;
 import com.example.eyeoflight_lite.env.BorderedText;
 import com.example.eyeoflight_lite.env.ImageUtils;
@@ -57,7 +58,6 @@ public class DetectorActivity extends CameraActivity {
     protected int previewWidth = 0;
     protected int previewHeight = 0;
 
-    OverlayView trackingOverlay;
     private Integer sensorOrientation;
 
     private Classifier detector;
@@ -72,18 +72,10 @@ public class DetectorActivity extends CameraActivity {
     private Matrix frameToCropTransform;
     private Matrix cropToFrameTransform;
 
-    private MultiBoxTracker tracker;
-
-    private BorderedText borderedText;
+    private MultiBoxTracker tracker;    //绘制方框
 
     @Override
     public void onPreviewSizeChosen(final Size size, final int rotation) {
-
-        final float textSizePx =
-                TypedValue.applyDimension(
-                        TypedValue.COMPLEX_UNIT_DIP, TEXT_SIZE_DIP, getResources().getDisplayMetrics());
-        borderedText = new BorderedText(textSizePx);
-        borderedText.setTypeface(Typeface.MONOSPACE);
 
         tracker = new MultiBoxTracker(this);
 
@@ -100,7 +92,6 @@ public class DetectorActivity extends CameraActivity {
             cropSize = TF_OD_API_INPUT_SIZE;
         } catch (final IOException e) {
             e.printStackTrace();
-//            LOGGER.e(e, "Exception initializing classifier!");
             Toast toast =
                     Toast.makeText(
                             getApplicationContext(), "Classifier could not be initialized", Toast.LENGTH_SHORT);
@@ -112,9 +103,7 @@ public class DetectorActivity extends CameraActivity {
         previewHeight = size.getHeight();
 
         sensorOrientation = rotation - getScreenOrientation();
-//        LOGGER.i("Camera orientation relative to screen canvas: %d", sensorOrientation);
 
-//        LOGGER.i("Initializing at size %dx%d", previewWidth, previewHeight);
         rgbFrameBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888);
         croppedBitmap = Bitmap.createBitmap(cropSize, cropSize, Bitmap.Config.ARGB_8888);
 
@@ -127,14 +116,12 @@ public class DetectorActivity extends CameraActivity {
         cropToFrameTransform = new Matrix();
         frameToCropTransform.invert(cropToFrameTransform);
 
-        trackingOverlay = (OverlayView) findViewById(R.id.tracking_overlay);
-        trackingOverlay.addCallback(
-                new OverlayView.DrawCallback() {
-                    @Override
-                    public void drawCallback(final Canvas canvas) {
-                        tracker.draw(canvas);
-                    }
-                });
+        cameraFragment.setDrawCallBack(new OverlayView.DrawCallback() {
+            @Override
+            public void drawCallback(Canvas canvas) {
+                tracker.draw(canvas);
+            }
+        });
 
         tracker.setFrameConfiguration(previewWidth, previewHeight, sensorOrientation);
     }
@@ -146,20 +133,21 @@ public class DetectorActivity extends CameraActivity {
     protected void processImage() {
         ++timestamp;
         final long currTimestamp = timestamp;
-        trackingOverlay.postInvalidate();
 
-        // No mutex needed as this method is not reentrant.
+        if(showBox)
+            cameraFragment.postInvalidate();
+
         if (computingDetection) {
             return;
         }
         computingDetection = true;
-//        LOGGER.i("Preparing image " + currTimestamp + " for detection in bg thread.");
 
         rgbFrameBitmap.setPixels(getRgbBytes(), 0, previewWidth, 0, 0, previewWidth, previewHeight);
 
 
         final Canvas canvas = new Canvas(croppedBitmap);
         canvas.drawBitmap(rgbFrameBitmap, frameToCropTransform, null);
+
         // For examining the actual TF input.
         if (SAVE_PREVIEW_BITMAP) {
             ImageUtils.saveBitmap(croppedBitmap);
@@ -200,9 +188,7 @@ public class DetectorActivity extends CameraActivity {
 
                             if (location != null && result.getConfidence() >= minimumConfidence) {
                                 canvas.drawRect(location, paint);
-
                                 cropToFrameTransform.mapRect(location);
-
                                 result.setLocation(location);
 
                                 //添加距离信息
@@ -235,7 +221,8 @@ public class DetectorActivity extends CameraActivity {
                         frame.close();
 
                         tracker.trackResults(mappedRecognitions, currTimestamp);
-                        trackingOverlay.postInvalidate();
+                        if(showBox)
+                            cameraFragment.postInvalidate();
                         computingDetection = false;
 
                     }

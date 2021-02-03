@@ -2,15 +2,11 @@ package com.example.eyeoflight_lite;
 
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
@@ -18,30 +14,21 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 import android.util.Size;
-import android.view.View;
 import android.view.WindowManager;
-import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
+import com.example.eyeoflight_lite.Fragment.CameraFragment;
+import com.example.eyeoflight_lite.Fragment.FragmentOperation;
+import com.example.eyeoflight_lite.Fragment.IndexFragment;
 import com.example.eyeoflight_lite.env.ImageUtils;
-import com.intel.realsense.librealsense.Colorizer;
 import com.intel.realsense.librealsense.Config;
-import com.intel.realsense.librealsense.DepthFrame;
 import com.intel.realsense.librealsense.DeviceList;
 import com.intel.realsense.librealsense.DeviceListener;
-import com.intel.realsense.librealsense.Extension;
 import com.intel.realsense.librealsense.Frame;
-import com.intel.realsense.librealsense.FrameCallback;
-import com.intel.realsense.librealsense.FrameReleaser;
 import com.intel.realsense.librealsense.FrameSet;
-import com.intel.realsense.librealsense.GLRsSurfaceView;
 import com.intel.realsense.librealsense.Pipeline;
 import com.intel.realsense.librealsense.PipelineProfile;
 import com.intel.realsense.librealsense.RsContext;
-import com.intel.realsense.librealsense.StreamFormat;
-import com.intel.realsense.librealsense.StreamProfile;
 import com.intel.realsense.librealsense.StreamType;
 
 import java.io.ByteArrayOutputStream;
@@ -54,8 +41,6 @@ public abstract class CameraActivity extends AppCompatActivity {
     protected static final int height = 480;
 
     private byte[] bytes = new byte[width * height * 3];
-
-    private GLRsSurfaceView mGLSurfaceView;     //显示画面
 
     boolean mPermissionsGranted = false;        //获取了USB摄像头权限
     private boolean mIsStreaming = false;       //正在拍摄
@@ -70,6 +55,15 @@ public abstract class CameraActivity extends AppCompatActivity {
     protected boolean computingDetection = false;   //正在计算图像
     private int[] rgbBytes = null;
     private float[] depth = new float[width * height * 2];
+
+    protected boolean showRgbFrame = false;     //显示摄像头画面
+    protected boolean showBox = false;          //显示方框
+
+    protected Frame fr;
+
+    protected CameraFragment cameraFragment;
+    protected IndexFragment indexFragment;
+    private FragmentType fragmentType;      //正在显示那个fragment
 
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -86,14 +80,6 @@ public abstract class CameraActivity extends AppCompatActivity {
         Typeface typeface = Typeface.createFromAsset(getAssets(), "textType.TTF");
         ((TextView) findViewById(R.id.toolbar_title)).setTypeface(typeface);
 
-        //显示屏幕
-        mGLSurfaceView = findViewById(R.id.glSurfaceView);
-        mGLSurfaceView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE
-                | View.SYSTEM_UI_FLAG_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
 
         //动态申请USB摄像头权限
         if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.O &&
@@ -104,8 +90,12 @@ public abstract class CameraActivity extends AppCompatActivity {
 
         mPermissionsGranted = true;
 
+        cameraFragment = new CameraFragment();
+        indexFragment = new IndexFragment();
+
         onPreviewSizeChosen(new Size(width, height), 0);
 
+        getSupportFragmentManager().beginTransaction().replace(R.id.container, indexFragment).commit();
     }
 
 
@@ -148,18 +138,6 @@ public abstract class CameraActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onStart() {
-        super.onStart();
-
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        mGLSurfaceView.close();
-    }
-
-    @Override
     protected void onResume() {
         super.onResume();
         //如果获得了权限，就开启摄像头
@@ -179,7 +157,6 @@ public abstract class CameraActivity extends AppCompatActivity {
         stop();
     }
 
-    protected Frame fr;
 
     //摄像头帧处理线程
     private final Thread cameraThread = new Thread(new Runnable() {
@@ -190,14 +167,14 @@ public abstract class CameraActivity extends AppCompatActivity {
                 while (!cameraThread.isInterrupted()) {
                     try (FrameSet frames = mPipeline.waitForFrames()) {
 
-                        mGLSurfaceView.upload(frames);
-
-//                        if (isProcessingFrame)
-//                            continue;
-
                         //提取彩色摄像机图像
                         try (Frame rgbFrame = frames.first(StreamType.COLOR)) {
-//                            mGLSurfaceView.upload(rgbFrame);//更新显示
+                            //更新显示
+                            if (showRgbFrame) {
+                                cameraFragment.upload(rgbFrame);
+                                Log.d(TAG, "upload the rgbRrame");
+                            }
+
                             rgbFrame.getData(bytes);
                         }
 
@@ -206,10 +183,8 @@ public abstract class CameraActivity extends AppCompatActivity {
                             continue;
                         }
 
-                        fr = frames.first(StreamType.DEPTH);
-
-
                         //提取深度图像
+                        fr = frames.first(StreamType.DEPTH);
 
                         processImage();
                     }
@@ -246,7 +221,7 @@ public abstract class CameraActivity extends AppCompatActivity {
                 }
             }
 
-            mGLSurfaceView.clear();
+//            cameraFragment.clearView();
             configAndStart();
             mIsStreaming = true;
             cameraThread.start();
@@ -265,7 +240,7 @@ public abstract class CameraActivity extends AppCompatActivity {
             //cameraHandler.removeCallbacks(mStreaming);
             cameraThread.interrupt();
             mPipeline.stop();
-            mGLSurfaceView.clear();
+//            cameraFragment.clearView();
         } catch (Exception e) {
         }
     }
@@ -280,6 +255,38 @@ public abstract class CameraActivity extends AppCompatActivity {
         return ImageUtils.convertByteToColor(bytes);
     }
 
+    @Override
+    public void onBackPressed() {
+        if (fragmentType == FragmentType.IndexFragment)
+            super.onBackPressed();
+        else {
+            switchToIndex();
+            showBox = false;
+            showRgbFrame = false;
+        }
+    }
+
+    public void switchToCameraFragment() {
+        getSupportFragmentManager().beginTransaction().replace(R.id.container, cameraFragment).commit();
+        cameraFragment.setOperation(new FragmentOperation() {
+            @Override
+            public void ResumeOperation() {
+                showBox = true;
+                showRgbFrame = true;
+            }
+        });
+    }
+
+    public void switchToIndex() {
+        getSupportFragmentManager().beginTransaction().replace(R.id.container, indexFragment).commit();
+        cameraFragment.setOperation(new FragmentOperation() {
+            @Override
+            public void ResumeOperation() {
+                showBox = false;
+                showRgbFrame = false;
+            }
+        });
+    }
 
     protected abstract void processImage();
 
@@ -292,4 +299,8 @@ public abstract class CameraActivity extends AppCompatActivity {
     protected abstract void setNumThreads(int numThreads);
 
     protected abstract void setUseNNAPI(boolean isChecked);
+
+    public enum FragmentType {
+        CameraFragment, IndexFragment, NavigationFragment
+    }
 }
