@@ -5,11 +5,6 @@ plugins {
 android {
     compileSdkVersion 30
     buildToolsVersion "30.0.3"
-    sourceSets{
-        main{
-            jniLibs.srcDirs = ['libs']
-        }
-    }
 
     defaultConfig {
         applicationId "com.example.eyeoflight_lite"
