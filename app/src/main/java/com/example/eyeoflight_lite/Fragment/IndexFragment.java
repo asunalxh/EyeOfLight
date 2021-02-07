@@ -39,7 +39,7 @@ public class IndexFragment extends Fragment {
         navigationView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                activity.switchToMap();
+                activity.switchToNavigation();
             }
         });
 

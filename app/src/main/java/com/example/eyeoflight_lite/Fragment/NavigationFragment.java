@@ -1,7 +1,6 @@
 package com.example.eyeoflight_lite.Fragment;
 
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,14 +13,9 @@ import com.amap.api.location.AMapLocation;
 import com.amap.api.location.AMapLocationClient;
 import com.amap.api.location.AMapLocationClientOption;
 import com.amap.api.location.AMapLocationListener;
-import com.amap.api.maps.model.Poi;
 import com.amap.api.navi.AMapNavi;
 import com.amap.api.navi.AMapNaviListener;
 import com.amap.api.navi.AMapNaviView;
-import com.amap.api.navi.AmapNaviPage;
-import com.amap.api.navi.AmapNaviParams;
-import com.amap.api.navi.AmapNaviType;
-import com.amap.api.navi.AmapPageType;
 import com.amap.api.navi.enums.NaviType;
 import com.amap.api.navi.enums.TravelStrategy;
 import com.amap.api.navi.model.AMapCalcRouteResult;
@@ -38,7 +32,6 @@ import com.amap.api.navi.model.AimLessModeStat;
 import com.amap.api.navi.model.NaviInfo;
 import com.amap.api.navi.model.NaviPoi;
 import com.amap.api.services.core.PoiItem;
-import com.amap.api.services.core.SuggestionCity;
 import com.amap.api.services.poisearch.PoiResult;
 import com.amap.api.services.poisearch.PoiSearch;
 import com.example.eyeoflight_lite.R;
@@ -46,6 +39,7 @@ import com.example.eyeoflight_lite.R;
 import java.util.List;
 
 public class NavigationFragment extends Fragment {
+
     private static final String TAG = "NavigationFragment_Log";
     private AMapNaviView aMapNaviView;
     private AMapNavi aMapNavi;
@@ -53,6 +47,28 @@ public class NavigationFragment extends Fragment {
     private String cityCode;
     private String destinationId;
     private String destinationName = "万达广场";
+
+    private NavigationProgress navigationProgress = new NavigationProgress() {
+        @Override
+        public void onLocationChange(AMapLocation aMapLocation) {
+            cityCode = aMapLocation.getCityCode();
+            search(destinationName,10,1);
+        }
+
+        @Override
+        public void onSearchSuccess(PoiResult poiResult) {
+            List<PoiItem> list = poiResult.getPois();
+            if(list.size() > 0){
+                destinationId = list.get(0).getPoiId();
+                startNavigation();
+            }
+        }
+
+        @Override
+        public void onSearchFailure() {
+
+        }
+    };
 
     @Nullable
     @Override
@@ -70,7 +86,13 @@ public class NavigationFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        location();
+        aMapNaviView.onResume();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        aMapNaviView.onDestroy();
     }
 
     private void location(){
@@ -78,8 +100,7 @@ public class NavigationFragment extends Fragment {
         AMapLocationListener aMapLocationListener = new AMapLocationListener() {
             @Override
             public void onLocationChanged(AMapLocation aMapLocation) {
-                cityCode = aMapLocation.getCityCode();
-                search(destinationName);
+                navigationProgress.onLocationChange(aMapLocation);
             }
         };
 
@@ -93,10 +114,10 @@ public class NavigationFragment extends Fragment {
 
     }
 
-    private void search(String place){
+    private void search(String place,int pageSize,int pageNum){
         PoiSearch.Query query = new PoiSearch.Query(place,"",cityCode);
-        query.setPageSize(10);
-        query.setPageNum(1);    //查询第一页
+        query.setPageSize(pageSize);
+        query.setPageNum(pageNum);
 
         PoiSearch poiSearch = new PoiSearch(getContext(),query);
         poiSearch.setOnPoiSearchListener(new PoiSearch.OnPoiSearchListener() {
@@ -104,13 +125,9 @@ public class NavigationFragment extends Fragment {
             public void onPoiSearched(PoiResult poiResult, int i) {
                 //查询成功
                 if(i == 1000){
-                    List<PoiItem> list = poiResult.getPois();
-                    PoiItem item = list.get(0);
-                    destinationId = item.getPoiId();
-
-                    navigate();
+                    navigationProgress.onSearchSuccess(poiResult);
                 }else{
-
+                    navigationProgress.onSearchFailure();
                 }
             }
 
@@ -122,7 +139,7 @@ public class NavigationFragment extends Fragment {
         poiSearch.searchPOIAsyn();
     }
 
-    private void navigate(){
+    private void startNavigation(){
         NaviPoi destination = new NaviPoi(destinationName,null,destinationId);
         aMapNavi.calculateWalkRoute(null,destination, TravelStrategy.SINGLE);
         aMapNavi.setUseInnerVoice(true,true);
@@ -307,6 +324,21 @@ public class NavigationFragment extends Fragment {
 
             }
         });
+    }
+
+    private void stopNavigation(){
+        aMapNavi.stopNavi();
+    }
+
+    public void startNaviTo(String place){
+        destinationName = place;
+        location();
+    }
+
+    private interface NavigationProgress{
+        void onLocationChange(AMapLocation aMapLocation);
+        void onSearchSuccess(PoiResult poiResult);
+        void onSearchFailure();
     }
 
 }
