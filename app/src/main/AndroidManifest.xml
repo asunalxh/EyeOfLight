@@ -17,12 +17,21 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".MainActivity"></activity>
+        <activity android:name=".MainActivity">
+        </activity>
+
+        <activity
+            android:name="com.amap.api.navi.AmapRouteActivity"
+            android:theme="@android:style/Theme.NoTitleBar"
+            android:configChanges="orientation|keyboardHidden|screenSize|navigation" />
 
         <meta-data
             android:name="com.amap.api.v2.apikey"
             android:value="aa26992a4b5880b57d15a9b4dbc7429f"/>
+
+        <service android:name="com.amap.api.location.APSService"/>
     </application>
+
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" />
