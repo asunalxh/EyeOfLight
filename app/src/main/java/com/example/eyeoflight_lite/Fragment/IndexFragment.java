@@ -12,6 +12,7 @@ import androidx.fragment.app.Fragment;
 
 import com.example.eyeoflight_lite.CameraActivity;
 import com.example.eyeoflight_lite.R;
+import com.example.eyeoflight_lite.env.OCRTool;
 
 public class IndexFragment extends Fragment {
 
@@ -46,9 +47,8 @@ public class IndexFragment extends Fragment {
         readView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                activity.switchToNavigation();
-            }
-        });
+
+            }});
         return view;
     }
 }

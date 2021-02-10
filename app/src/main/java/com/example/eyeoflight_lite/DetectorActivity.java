@@ -162,8 +162,6 @@ public class DetectorActivity extends CameraActivity {
                     public void run() {
                         final List<Classifier.Recognition> results = detector.recognizeImage(croppedBitmap);    //物体识别结果
 
-                        Log.d(TAG, "DataSize: " + frame.getDataSize());
-
                         cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
                         final Canvas canvas = new Canvas(cropCopyBitmap);
                         final Paint paint = new Paint();
