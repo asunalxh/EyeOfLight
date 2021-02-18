@@ -1,6 +1,5 @@
 package com.example.eyeoflight_lite;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -8,8 +7,6 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
@@ -25,12 +22,15 @@ import com.example.eyeoflight_lite.Fragment.CameraFragment;
 import com.example.eyeoflight_lite.Fragment.FragmentOperation;
 import com.example.eyeoflight_lite.Fragment.IndexFragment;
 import com.example.eyeoflight_lite.Fragment.MapFragment;
-import com.example.eyeoflight_lite.Fragment.MicroBottomFragment;
 import com.example.eyeoflight_lite.Fragment.NavigationFragment;
-import com.example.eyeoflight_lite.Fragment.SiriBottomFragment;
+import com.example.eyeoflight_lite.customview.SiriWaveView;
 import com.example.eyeoflight_lite.env.ImageUtils;
-import com.example.eyeoflight_lite.env.OCRTool;
+import com.example.eyeoflight_lite.voice.IatUtil;
+import com.example.eyeoflight_lite.voice.TtsUtil;
+import com.example.eyeoflight_lite.voice.WakeupUtil;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.iflytek.cloud.SpeechConstant;
+import com.iflytek.cloud.SpeechUtility;
 import com.intel.realsense.librealsense.Config;
 import com.intel.realsense.librealsense.DeviceList;
 import com.intel.realsense.librealsense.DeviceListener;
@@ -40,14 +40,6 @@ import com.intel.realsense.librealsense.Pipeline;
 import com.intel.realsense.librealsense.PipelineProfile;
 import com.intel.realsense.librealsense.RsContext;
 import com.intel.realsense.librealsense.StreamType;
-
-import org.jetbrains.annotations.NotNull;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-
-import okhttp3.Response;
 
 public abstract class CameraActivity extends AppCompatActivity {
     private static final String TAG = "CameraActivity_Log";
@@ -80,17 +72,20 @@ public abstract class CameraActivity extends AppCompatActivity {
     protected IndexFragment indexFragment;
     protected MapFragment mapFragment;
     protected NavigationFragment navigationFragment;
-    private SiriBottomFragment siriBottomFragment;
-    private MicroBottomFragment microBottomFragment;
 
     private FragmentType fragmentType;      //正在显示哪个fragment
 
+    private SiriWaveView siri;
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
+
+
+        //初始化讯飞语音服务
+        SpeechUtility.createUtility(getApplicationContext(), SpeechConstant.APPID +"=" + getString(R.string.app_id));
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);//保持屏幕常亮
 
@@ -113,12 +108,17 @@ public abstract class CameraActivity extends AppCompatActivity {
         mapFragment = new MapFragment();
         navigationFragment = new NavigationFragment();
 
+        siri = findViewById(R.id.siri);
+
+        IatUtil.init(getApplicationContext());
+        TtsUtil.init(getApplicationContext());
+        WakeupUtil.init(getApplicationContext());
+
 
         onPreviewSizeChosen(new Size(width, height), 0);
 
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.container, indexFragment)
-                .replace(R.id.bottom_container,new MicroBottomFragment())
                 .commit();
 
         debug();
@@ -126,26 +126,43 @@ public abstract class CameraActivity extends AppCompatActivity {
 
 
     private void debug() {
+        WakeupUtil.setWakeUpUtilListener(new WakeupUtil.WakeUpUtilListener() {
+            @Override
+            public void onResult() {
+                TtsUtil.speak("我在", new TtsUtil.TtsUtilListener() {
+                    @Override
+                    public void onSpeakCompleted() {
 
+                    }
+                });
+            }
+
+            @Override
+            public void onVolumeChange(int volume) {
+
+            }
+        });
+        WakeupUtil.startListen();
 
         FloatingActionButton floatingActionButton = findViewById(R.id.floating_btn);
         floatingActionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                Bitmap bitmap = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);
-                bitmap.setPixels(getRgbBytes(),0,width,0,0,width,height);
+//                Bitmap bitmap = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);
+//                bitmap.setPixels(getRgbBytes(),0,width,0,0,width,height);
+//
+//                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+//                bitmap.compress(Bitmap.CompressFormat.JPEG,100,outputStream);
+//                byte[] b = outputStream.toByteArray();
+//
+//                OCRTool.getWord(b, new OCRTool.OnGetWords() {
+//                    @Override
+//                    public void onGetWords(String words) {
+//                        Log.d(TAG,"OCR response: " + words);
+//                    }
+//                });
 
-                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.JPEG,100,outputStream);
-                byte[] b = outputStream.toByteArray();
-
-                OCRTool.getWord(b, new OCRTool.OnGetWords() {
-                    @Override
-                    public void onGetWords(String words) {
-                        Log.d(TAG,"OCR response: " + words);
-                    }
-                });
             }
         });
     }
@@ -347,7 +364,6 @@ public abstract class CameraActivity extends AppCompatActivity {
         getSupportFragmentManager().beginTransaction().replace(R.id.container, navigationFragment).commit();
         fragmentType = FragmentType.NavigationFragment;
     }
-
 
 
     protected abstract void processImage();
