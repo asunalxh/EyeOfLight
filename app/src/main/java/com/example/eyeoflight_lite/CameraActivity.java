@@ -129,7 +129,7 @@ public abstract class CameraActivity extends AppCompatActivity {
         WakeupUtil.setWakeUpUtilListener(new WakeupUtil.WakeUpUtilListener() {
             @Override
             public void onResult() {
-                TtsUtil.speak("我在", new TtsUtil.TtsUtilListener() {
+                TtsUtil.speak("您需要什么帮助", new TtsUtil.TtsUtilListener() {
                     @Override
                     public void onSpeakCompleted() {
 

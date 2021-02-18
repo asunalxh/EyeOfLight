@@ -221,7 +221,7 @@ public class TtsUtil {
         }
         //mTts.setParameter(SpeechConstant.TTS_DATA_NOTIFY,"1");//支持实时音频流抛出，仅在synthesizeToUri条件下支持
         //设置合成语速
-        mTts.setParameter(SpeechConstant.SPEED, "50");
+        mTts.setParameter(SpeechConstant.SPEED, "75");
         //设置合成音调
         mTts.setParameter(SpeechConstant.PITCH, "50");
         //设置合成音量
