@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -16,7 +17,8 @@ import com.example.eyeoflight_lite.env.OCRTool;
 
 public class IndexFragment extends Fragment {
 
-    private CardView cameraView,navigationView,readView;
+    private CardView cameraView;
+    private LinearLayout navigationView,readView;
     private CameraActivity activity;
 
     @Nullable

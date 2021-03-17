@@ -121,7 +121,7 @@ public abstract class CameraActivity extends AppCompatActivity {
                 .replace(R.id.container, indexFragment)
                 .commit();
 
-        debug();
+//        debug();
     }
 
 
